@@ -1,0 +1,4 @@
+#!/bin/bash
+# Schedule light on and off time
+at -f /usr/local/bin/lighton $(/usr/local/bin/dusktime)
+at -f /usr/local/bin/lightoff $(/usr/local/bin/bedtime)

@@ -1,0 +1,12 @@
+Requires at command:
+
+
+sudo apt-get install at
+
+
+
+duncans@ubuntu:~$ sudo crontab -l
+# m h  dom mon dow   command
+00 03 * * * /usr/local/bin/schedule_light
+
+

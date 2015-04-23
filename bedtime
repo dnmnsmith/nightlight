@@ -1,0 +1,53 @@
+#!/usr/bin/perl
+
+use strict vars;
+use Getopt::Std;
+use Time::Local;
+use POSIX qw(strftime);
+
+our($opt_v,$opt_u);
+
+
+getopts('vu') or showUsage($0,1);
+
+
+#echo "23:00"
+
+my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
+
+
+# 11pm local time.
+my $bth = 23;
+my $btm = 00;
+
+my $time = timelocal(0,$btm,$bth,$mday,$mon,$year);
+
+if ($opt_u)
+{
+    print strftime( "%H:%M UTC\n", gmtime($time ));
+}
+else
+{
+    print strftime( "%H:%M\n", localtime($time ));
+}
+
+exit 0;
+
+
+sub showUsage {
+
+  # This subroutine prints the script usage summary to stderr
+  # (in case stdout is being used for code generation.)
+
+    my ($progName, $returnCode) = @_;
+
+  # Strip off the path name.
+
+    $progName =~ s@.*/@@;
+
+  print (STDERR "usage: $progName [-vu] \n",
+         "  Options:  -v: Verbose.\n",
+         "            -u: UTC time\n" );
+
+    exit $returnCode;
+}

@@ -1,0 +1,2 @@
+#!/bin/bash
+sudo bbsbsend -s D -r 3 -c on

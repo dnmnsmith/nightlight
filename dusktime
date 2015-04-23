@@ -1,0 +1,145 @@
+#!/usr/bin/perl
+
+# (C) Duncan Smith 2015 duncan@dandjhome.net
+#
+#    This program is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+use strict vars;
+use Getopt::Std;
+use Time::Local;
+use Scalar::Util qw(looks_like_number);
+
+use POSIX qw(strftime);
+
+our($opt_v,$opt_u,$opt_t,$opt_o);
+
+my $DUSK_TIME_DIR="/usr/local/etc";
+my $DUSK_TIME_FILE=$DUSK_TIME_DIR."/dusk_times.txt";
+
+# Mins after sunset that dusk starts.
+my $SUNSET_OFFSET = 5;
+
+getopts('vut:o:') or showUsage($0,1);
+
+
+defined $opt_t and $DUSK_TIME_FILE = $opt_t; 
+defined $opt_o and $SUNSET_OFFSET = $opt_o;
+
+die "Unable to read $DUSK_TIME_FILE" unless -r $DUSK_TIME_FILE; 
+die "Offset $SUNSET_OFFSET must be a number" unless looks_like_number( $SUNSET_OFFSET );
+
+# Time in dusk table is stored in gmtime.
+my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = gmtime(time);
+
+my $mday00 = sprintf( "%02d", $mday );
+
+
+$opt_v and print "mday is $mday00\n";
+
+my $timeline = undef;
+
+
+
+open TIMES, "< $DUSK_TIME_FILE" or die "Failed to open $DUSK_TIME_FILE : $!";
+
+while (<TIMES>)
+{
+	m/^($mday00)\s*(\S.*)$/ and $timeline = $2;
+}
+close TIMES;
+
+defined $timeline or die "Unable to find day $mday00 in $DUSK_TIME_FILE\n";
+
+$opt_v and print "$timeline\n";
+
+my @times = split /\s+/,$timeline;
+
+
+$opt_v and print scalar(@times);
+$opt_v and print "\n";
+
+my $sunset = @times[ (2 * $mon) + 1 ];
+
+$opt_v and print "Sunset time = $sunset\n";
+
+my $ssh;
+my $ssm;
+
+if ($sunset =~ m/(\d\d)(\d\d)/)
+{
+    $ssh = int( $1 );
+    $ssm = int( $2 );
+}
+else
+{
+    die "Failed to parse $sunset into hours and mins";
+}
+
+$opt_v and print "$ssh $ssm\n";
+
+$ssm = $ssm + $SUNSET_OFFSET;
+
+while ($ssm > 60)
+{
+    $ssh++;
+    $ssm -= 60;
+}
+
+$opt_v and print "$ssh $ssm\n";
+
+# Store as a a Linux time variable.
+$opt_v and print "timegm $ssm,$ssh,$mday,$mon,$year\n";
+my $time = timegm(0,$ssm,$ssh,$mday,$mon,$year);
+
+if ($opt_u)
+{
+    print strftime( "%H:%M UTC\n", gmtime($time ));
+}
+else
+{
+    print strftime( "%H:%M\n", localtime($time ));
+}
+
+#print sprintf( "%02d:%02d\n", $ssh, $ssm );
+
+exit 0;
+
+sub HELP_MESSAGE() 
+{
+	showUsage( $0, 1 );
+}
+
+
+sub showUsage {
+
+  # This subroutine prints the script usage summary to stderr
+  # (in case stdout is being used for code generation.)
+
+    my ($progName, $returnCode) = @_;
+
+  # Strip off the path name.
+
+    $progName =~ s@.*/@@;
+
+  print (STDERR "usage: $progName [-v] [-u] [-o <mins>] [-t <file>]\n\n",
+	 "Print dusk time HH:MM, which is sunset time plus an offset, by default in local time.\n\n".
+         "Options:  -v         : Verbose.\n".
+	 "          -u         : Print in UTC. Default is local time\n".
+	 "          -o <mins>  : Offset from sunset, default 5 mins.\n".
+         "          -t <file>  : Times File (default /usr/local/etc/dusk_times.txt\n" );
+
+    exit $returnCode;
+}
+
+
